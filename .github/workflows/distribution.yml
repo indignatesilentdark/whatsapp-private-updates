@@ -1,0 +1,27 @@
+name: Publicar archivos de distribución
+on:
+  push:
+    branches: [main]
+    paths: ['distribution/**', 'VERSION', '.github/workflows/distribution.yml']
+  workflow_dispatch:
+permissions:
+  contents: write
+concurrency:
+  group: distribution-release
+  cancel-in-progress: false
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Verificar y publicar
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          cd distribution
+          sha256sum --check SHA256SUMS --ignore-missing
+          version=$(tr -d '\r\n' < ../VERSION)
+          [[ "$version" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]]
+          gh release create "v$version" WhatsApp-Private.exe WhatsApp-Private-Windows-x64.zip SHA256SUMS --repo "$GITHUB_REPOSITORY" --draft --title "WhatsApp Private $version" --notes "Actualizaciones automáticas verificadas con SHA256. Instala esta versión una vez para activar el actualizador. Se conserva el perfil local. Aplicación independiente basada en vianziro/Whatsapp-Dekstop, licencia MIT."
+          gh release edit "v$version" --repo "$GITHUB_REPOSITORY" --draft=false --latest
